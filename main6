@@ -1,0 +1,51 @@
+import math
+import numpy as np
+from PIL import Image
+import matplotlib.pyplot as plt
+
+#Fourierova transformácia obrazu
+#Zobrazenie pôvodného obrazu a jeho frekvenčného spektra
+#Filtrácia v frekvenčnej oblasti
+#Inverzná Fourierova transformácia
+
+img = Image.open("image.jpg").convert("L")
+M, N = img.size
+
+fxy = np.array(img)
+Fuv = np.fft.fft2(fxy)
+PSD = np.abs(Fuv) ** 2
+
+def D(u, v):
+    return math.sqrt((u - M / 2) ** 2 + (v - N / 2) ** 2)
+
+D0 = 40
+Huv = np.zeros((N, M))
+for u in range(N):
+    for v in range(M):
+        if D(u, v) <D0:
+            Huv[u, v] = 1
+        else:
+            Huv[u, v] = 0
+        # Huv[u, v] = math.exp(-D(u, v) ** 2 / 2 * D0 ** 2)
+
+# fig, axs = plt.subplots(2, 2)
+# axs[0, 0].impshow(fxy, cmap="gray")
+# axs[0, 1].imshow(np.log10(np.fft.fftshift(PSD), cmap="gray"))
+
+Guv = np.fft.fftshift(Fuv) * Huv
+gxy = np.abs(np.fft.ifft2(np.fft.ifftshift(Guv)))
+
+fig = plt.figure()
+ax1 = fig.add_subplot(231)
+ax1.imshow(fxy, cmap="gray")
+ax2 = fig.add_subplot(232)
+ax2.imshow(np.log10(np.fft.fftshift(np.abs(Fuv) ** 2)), cmap="gray")
+ax3 = fig.add_subplot(233, projection="3d")
+x, y = np.mgrid[:N, :M]
+ax3.plot_surface(x, y, Huv, rstride=30, cstride=30)
+ax4 = fig.add_subplot(234)
+ax4.imshow(np.log10(np.abs(Guv) ** 2), cmap="gray")
+ax5 = fig.add_subplot(235)
+ax5.imshow(gxy, cmap="gray")
+
+plt.show()
