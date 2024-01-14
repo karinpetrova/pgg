@@ -1,0 +1,51 @@
+from PIL import Image
+import numpy as np
+#Konvolúcia
+#Mediánový filter
+
+def convolution(image, core):
+    width, height = image.size
+    image_edited = Image.new("L", (width, height))
+
+    for x in range(1, width - 1):
+        for y in range(1, height - 1):
+            current_kernel = 0
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    pixel = image.getpixel((x - 1 + i, y - 1 + j))
+                    current_kernel += pixel * core[i, j]
+            image_edited.putpixel((x, y), int(current_kernel))
+    return image_edited
+
+def median(image):
+    width, height = image.size
+    image_edited2 = Image.new("L", (width, height))
+
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            l = []
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    pixel = image.getpixel((x+i, y+j))
+                    l.append(pixel)
+            l.sort()
+            image_edited2.putpixel((x, y), l[len(l)//2])
+    return image_edited2
+
+# Load the image
+image = Image.open("image.jpg").convert("L")
+
+# Define the kernel
+core = np.array([[0, 0, 0],
+                 [0, 1, 0],
+                 [0, 0, 0]])
+
+# Apply convolution
+image_edited = convolution(image, core)
+# Show the edited image
+image_edited.save("convolution.jpg")
+
+# Apply median
+image_edited2 = median(image)
+# Show the edited image
+image_edited2.save("median.jpg")
