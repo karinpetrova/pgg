@@ -1,0 +1,73 @@
+import numpy as np
+from PIL import Image
+
+#ačítanie a prevod obrazu na odtiene sivej
+#Konvolučná operácia
+#Filtrovanie pomocou mediánu
+
+image = Image.open('image.jpg')
+# Convert the image to grayscale
+image = image.convert('L')
+
+# Save the grayscale image
+image.save("imagegrayscale.jpg")
+
+def convolve2D(image, kernel):
+    width, height = image.size
+    new = Image.new("L", (width, height))
+    # loop through each pixel in the interior of the image
+    for y in range(1, height-1):
+        for x in range(1, width-1):
+            s = 0
+            # Apply the convolution kernel
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    c = img.getpixel((x+i, y+j))
+                    s += c * kernel[j+1, i+1]
+            new.putpixel((x, y), int(s))
+    return new
+
+def median_filter(image):
+    width, height = image.size
+    new = Image.new("L", (width, height))
+    for y in range(1, height-1):
+        for x in range(1, width-1):
+            l = []
+            # Apply the median filter
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    c = image.getpixel((x+i, y+j))
+                    l.append(c)
+            l.sort()
+            new.putpixel((x, y), l[len(l)//2])
+    return new
+
+# Generate random coordinates for salt and pepper noise
+width, height = image.size
+coordinates = (np.random.rand(100, 2) * np.array([width, height])).astype(int)
+xs = coordinates[:, 0]
+ys = coordinates[:, 1]
+
+# Add salt and pepper noise to the image
+npimg = np.array(image)
+npimg[xs, ys] = 255
+img = Image.fromarray(npimg, "L")
+
+# Save the image with salt and pepper noise
+image.save("saltandpepper_noise.jpg")
+image.show()
+
+# Define a 3x3 averaging kernel
+kernel = np.array([[1, 1, 1],
+                   [1, 1, 1],
+                   [1, 1, 1]], dtype=float)
+
+kernel *= 1/9
+
+result1 = convolve2D(image, kernel)
+result1.save("convolved.jpg")
+result1.show()
+
+result2 = median_filter(image)
+result2.save("median.jpg")
+result2.show()
