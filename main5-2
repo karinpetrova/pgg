@@ -1,0 +1,26 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1) nas signal
+# cas 30s, vzorkovanie 1000
+t = np.linspace(0, 30, 1000)
+fx = np.sin(t)
+
+# 2) pridame biely sum
+Fu = np.abs(np.fft.fft(fx))
+noise = 100*np.random.randn(1000)
+Fu = Fu + noise
+
+# 3) naspat do casovej oblasti
+fx2 = np.fft.ifft(Fu)
+
+# 4) analyza signalu
+Fu2 = np.abs(np.fft.fft(fx2))
+
+fig = plt.figure()
+ax1 = fig.add_subplot(121)
+ax1.plot(t, fx2)
+
+ax2 = fig.add_subplot(122)
+ax2.plot(np.abs(np.array(np.fft.fftshift(Fu2))))
+plt.show()
