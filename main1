@@ -1,0 +1,99 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
+import colorsys
+
+#Vytvorenie histogramu
+
+image = Image.open("image.jpg")
+
+image = image.convert("L")
+
+image.save("imagegrayscale.jpg")
+
+width, height = image.size
+
+# rgb = np.array(image).reshape((width * height), -1)
+
+# hsv = np.zeros((width * height, 3))
+# for i in range(width*height):
+#    r, g, b = rgb[i]
+#    hsv[i] = colorsys.rgb_to_hsv(r, g, b)
+
+hist = [0] * 256
+hist = np.zeros(256)
+# for i in range(width*height):
+#    v = hsv[i][2]
+#    hist[int(v)] += 1
+
+for y in range(height):
+    for x in range(width):
+        pixel_value = image.getpixel((x, y))
+        hist[pixel_value] += 1
+
+hist /= (width * height)
+
+hist_function = [256]
+cdf = np.zeros(256)
+cdf[0] = hist[0]
+
+# for i in range(1, 256):
+#    cdf[i] = cdf[i-1] + hist[i]
+
+# for i in range(width*height):
+#   h, s, v = hsv[i]
+#   r, g, b = colorsys.hsv_to_rgb(h, s, v)
+#    rgb[i] = (r, g, b)
+
+cumulative_prob = 0
+for i in range(256):
+    cumulative_prob += hist[i]
+    cdf[i] = cumulative_prob
+
+plt.bar(range(256), hist)
+plt.xlabel("Pixel intensity")
+plt.ylabel("Frequency")
+plt.title("Grayscale Image Histogram")
+plt.show()
+
+plt.plot(range(256), cdf)
+plt.xlabel("Pixel intensity")
+plt.ylabel("CDF Value")
+plt.title("CDF")
+plt.grid()
+plt.show()
+
+plt.figure(1)
+plt.subplot(121)
+plt.bar(range(256), hist)
+plt.xlabel("Pixel intensity")
+plt.ylabel("Frequency")
+plt.title("Grayscale Image Histogram")
+plt.subplot(122)
+plt.xlabel("Pixel intensity")
+plt.ylabel("CDF Value")
+plt.title("CDF")
+plt.plot(cdf)
+plt.show()
+
+# result = Image.fromarray(rgb.reshape((height, width, 3)), 'RGB')
+# result.save('vysledok.jpg')
+
+imagenp = np.array(image)
+image1d = imagenp.reshape((width * height), -1)
+plt.hist(image1d, bins=256)
+plt.title("Histogram original photo")
+plt.show()
+image.show()
+
+cdf_image = Image.new("L", (width, height))
+
+for y in range(height):
+    for x in range(width):
+        pixel_value = image.getpixel((x, y))
+        new_pixel_value = int(cdf[pixel_value] * 255)
+        cdf_image.putpixel((x, y), new_pixel_value)
+
+cdf_image.save("cdf_image.jpg")
+
+cdf_image.show()
