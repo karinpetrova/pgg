@@ -1,0 +1,40 @@
+import cmath
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Fourierova transformácia
+
+def ft1d(f):
+    M = len(f)
+    f2 = []
+    for x in range(M):
+        f2.append(f[x] * math.pow(-1, x))
+    Fu = []
+    for u in range(M):
+        s = 0
+        for x in range(M):
+            s += f2[x]*cmath.exp(-2j*np.pi*u*x/M)
+        Fu.append(s)
+    return Fu
+
+t = np.linspace(0, 6*np.pi, 100)
+fx = np.sin(t) + np.sin(5*t)
+
+Fu = ft1d(fx)
+
+fig = plt.figure(figsize=(12, 6))
+ax1 = fig.add_subplot(121)
+ax1.plot(t, fx, label='sin(x)', color='b', linewidth=2)
+ax1.set_title('Sinus Function')
+ax1.set_xlabel('x (radians)')
+ax1.set_ylabel('sin(x)')
+ax1.grid(True)
+
+ax2 = fig.add_subplot(122)
+ax2.plot(abs(np.array(Fu)))
+ax2.set_title('Fourier Transform (Magnitude)')
+ax2.set_xlabel('Frequency')
+ax2.set_ylabel('Magnitude')
+ax2.grid(True)
+plt.show()
