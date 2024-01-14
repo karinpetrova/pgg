@@ -1,0 +1,72 @@
+import numpy as np
+from PIL import Image
+
+# Tvorba masky
+# Wienerov filter
+
+
+def gauss_kernel(velkost, sigma):
+    x = np.arange(0, velkost+1, 1, float)
+    y = x[:, np.newaxis]
+    maska = np.exp(-4*np.log(2) * ((x-velkost//2)**2 + (y-velkost//2)**2) / sigma**2)
+    maska /= maska.sum()
+    return maska
+
+def motion_blur_psf(r):
+    maska = np.zeros((2*r+1, 2*r+1))
+    maska[r,:] = 1
+    maska /= maska.sum()
+    return maska
+
+fxy_skutocny = Image.open("image.jpg").convert("L")
+
+sirka, vyska = fxy_skutocny.size
+fxy_skutocny = np.array(fxy_skutocny)
+
+maska_r = 4
+# maska = gauss_kernel(maska_r*2, 3.3)
+maska = motion_blur_psf(maska_r)
+
+# konvolucia masky s obrazom
+filtrovany = np.zeros((vyska, sirka), dtype=float)
+for y in range(maska_r, vyska - maska_r):
+    for x in range(maska_r, sirka - maska_r):
+        value = maska * fxy_skutocny[(y - maska_r):(y + maska_r + 1), (x - maska_r):(x + maska_r + 1)]
+        filtrovany[y, x] = min(255, max(0, value.sum()))
+
+mean = 0.0
+sigma = 0.000001 # pri vacsom sume to rychlo prestane fungovat
+gaus = np.random.normal(mean, sigma, (vyska, sirka))
+zasumeny = filtrovany + gaus
+
+gxy_poskodeny = zasumeny
+
+Image.fromarray(np.array(gxy_poskodeny).astype(np.uint8), 'L').save('poskodeny.png')
+
+# hxy_degradacia = gauss_kernel(maska_r*2, 3.3)
+
+hxy_degradacia = maska
+
+vpad = (vyska - hxy_degradacia.shape[0]) // 2
+hpad = (sirka - hxy_degradacia.shape[1]) // 2
+vpadzv = (vyska - hxy_degradacia.shape[0]) % 2
+hpadzv = (sirka - hxy_degradacia.shape[1]) % 2
+hxy_degradacia = np.pad(hxy_degradacia, [(vpad, vpad + vpadzv), (hpad, hpad + hpadzv)], 'constant')
+
+Huv_degradacia = np.fft.fft2(np.fft.fftshift(hxy_degradacia))
+
+Guv_poskodeny = np.fft.fft2(gxy_poskodeny)
+
+# Fuv_obnoveny = Guv_poskodeny / Huv_degradacia # INVERZNY FILTER
+
+# WIENER FILTER
+SNR = 100  # signal noise ratio
+K = 1.0 /SNR
+# Huv_degradacia = np.fft.fft2(np.fft.fftshift(hxy_degradacia))
+Wr = np.conj(Huv_degradacia) / (np.abs(Huv_degradacia) ** 2 + K)
+Fuv_obnoveny = Guv_poskodeny * Wr
+
+fxy_obnoveny = np.abs(np.fft.ifft2(Fuv_obnoveny))
+
+vysledok = Image.fromarray(np.asarray(fxy_obnoveny).astype(np.uint8), 'L')
+vysledok.save('vysledok.png')
