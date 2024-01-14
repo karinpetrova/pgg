@@ -1,0 +1,25 @@
+import numpy as np
+from PIL import Image
+import matplotlib.pyplot as plt
+
+# Odstránenie vysokofrekvenčných koeficientov
+
+fxy = Image.open("image.jpg").convert("L")
+sirka, vyska = fxy.size
+fxy = np.array(fxy)
+Fuv = np.fft.fft2(fxy)
+
+# maz koeficienty
+FuvSort = np.sort(np.abs(Fuv.reshape(-1)))
+nechaj = 0.01
+prah = FuvSort[int(np.floor((1-nechaj)*len(FuvSort)))]
+ind = np.abs(Fuv) > prah
+Fuv2 = Fuv*ind
+fxy2 = np.abs(np.fft.ifft2(Fuv2))
+
+fig = plt.figure()
+ax1 = fig.add_subplot(121)
+ax1.imshow(fxy, cmap="gray")
+ax2 = fig.add_subplot(122)
+ax2.imshow(fxy2, cmap="gray")
+plt.show()
