@@ -1,0 +1,13 @@
+from PIL import Image
+
+image = Image.open("image.jpg").convert("L")
+width, height = image.size
+
+def transformation(T):
+    for y in range(height):
+        for x in range(width):
+            color = image.getpixel((x, y))
+            color = int(T(color))
+            image.putpixel((x, y), color)
+
+# nedokončené
