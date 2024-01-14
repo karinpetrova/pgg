@@ -1,0 +1,92 @@
+import numpy as np
+from PIL import Image
+
+# Load the image
+image = Image.open('image.jpg')
+# Convert the image to grayscale
+image = image.convert('L')
+
+image.save("imagegrayscale.jpg")
+
+def convolve2D(image, kernel):
+    width, height = image.size
+    new = Image.new("L", (width, height))
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            s = 0
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    c = image.getpixel((x + i, y + j))
+                    s += c * kernel[j + 1, i + 1]
+            new.putpixel((x, y), int(s))
+    return new
+
+def median_filter(image):
+    width, height = image.size
+    new = Image.new("L", (width, height))
+    for y in range(1, height-1):
+        for x in range(1, width-1):
+            l = []
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    c = image.getpixel((x+i, y+j))
+                    l.append(c)
+            l.sort()
+            new.putpixel((x, y), l[len(l)//2])
+    return new
+
+def compute_gradient(image):
+    kernel_x = np.array([[-1, 0, 1],
+                         [-1, 0, 1],
+                         [-1, 0, 1]], dtype=float)
+    kernel_y = np.array([[-1, -1, -1],
+                         [0, 0, 0],
+                         [1, 1, 1]], dtype=float)
+
+    gradient_x = convolve2D(image, kernel_x)
+    gradient_y = convolve2D(image, kernel_y)
+
+    gradient_magnitude = Image.new("L", gradient_x.size)
+    for y in range(image.height):
+        for x in range(image.width):
+            mag_x = gradient_x.getpixel((x, y))
+            mag_y = gradient_y.getpixel((x, y))
+            magnitude = int(np.sqrt(mag_x ** 2 + mag_y ** 2))
+            gradient_magnitude.putpixel((x, y), magnitude)
+
+    return gradient_magnitude
+
+def laplace_operator(image):
+    kernel = np.array([[0, -1, 0],
+                       [-1, 5, -1],
+                       [0, -1, 0]], dtype=float)
+    return convolve2D(image, kernel)
+#    kernel = np.array([[0, 1, 0],
+#                       [1, 4, 1],
+#                       [0, 1, 0]], dtype=float)
+
+width, height = image.size
+coordinates = (np.random.rand(100, 2) * np.array([width, height])).astype(int)
+xs = coordinates[:, 0]
+ys = coordinates[:, 1]
+npimg = np.array(image)
+npimg[xs, ys] = 255
+img = Image.fromarray(npimg, "L")
+image.save("saltandpepper_noise.jpg")
+
+kernel = np.array([[1, 1, 1],
+                   [1, 1, 1],
+                   [1, 1, 1]], dtype=float)
+kernel *= 1 / 9
+
+result1 = convolve2D(image, kernel)
+result1.save("convolved.jpg")
+
+result2 = median_filter(image)
+result2.save("median.jpg")
+
+result3 = laplace_operator(image)
+result3.save("laplace.jpg")
+
+result4 = compute_gradient(image)
+result4.save("gradient_magnitude.jpg")
