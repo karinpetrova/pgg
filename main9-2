@@ -1,0 +1,110 @@
+import heapq
+from collections import defaultdict
+import numpy as np
+from PIL import Image
+import scipy.fftpack
+
+def rgb2ycbcr(im):
+    xform = np.array([[.299, .587, .114], [-.1687, -.3313, .5], [.5, -.4187, -.0813]])
+    ycbcr = im.dot(xform.T)
+    ycbcr[:, :, [1, 2]] += 128
+    return np.uint8(ycbcr)
+
+def dct2d(f):
+    return scipy.fftpack.dct(scipy.fftpack.dct(f.T).T)
+"""
+def rle(v):
+    y = v[1:] != v[:-1]
+    k = np.append(np.where(y), len(v)-1)
+    z = np.diff(np.append(-1, k))
+    #p = np.cumsum(np.append(0, z))[:-1]
+    return np.dstack((v[k], z))
+"""
+
+def rle(v):
+    y = v[1:] != v[:-1]
+    k = np.append(np.where(y), len(v)-1)
+    z = np.diff(np.append(-1, k))
+    return np.column_stack((v[k], z))
+
+def huffman(freq):
+    heap = [[weight, [symbol, ""]] for symbol, weight in freq.items()]
+    heapq.heapify(heap)
+    while len(heap) > 1:
+        lo = heapq.heappop(heap)
+        hi = heapq.heappop(heap)
+        for pair in lo[1:]:
+            pair[1] = '0' + pair[1]
+        for pair in hi[1:]:
+            pair[1] = '1' + pair[1]
+        heapq.heappush(heap, [lo[0] + hi[0]] + lo[1:] + hi[1:])
+    huffman = {symbol: code for symbol, code in heap[0][1:]}
+    return huffman
+
+img = Image.open("image.jpg")
+sirka, vyska = img.size
+print("povodna velkost:", (sirka*vyska*3))
+
+npimg = np.array(img)
+ycbcrimg = rgb2ycbcr(npimg)
+
+kvant = np.array([
+    [16, 11, 10, 16, 24, 40, 51, 61],
+    [12, 12, 14, 19, 26, 58, 60, 55],
+    [14, 13, 16, 24, 40, 57, 69, 56],
+    [14, 17, 22, 29, 51, 87, 80, 62],
+    [18, 22, 37, 56, 68, 109, 103, 77],
+    [24, 35, 55, 64, 81, 104, 113, 92],
+    [49, 64, 78, 87, 103, 121, 120, 101],
+    [72, 92, 95, 98, 112, 100, 103, 99]])
+
+zigzag_idx = np.array([0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20,
+                       13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52,
+                       45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63])
+
+w = 8
+sucet = 0
+rle_data = []
+for k in range(3):
+    if k == 0:
+        # Y
+        fxy = ycbcrimg[:, :, k]
+        s, v = sirka, vyska
+    else:
+        # Cb, Cr
+        fxy = ycbcrimg[:, :, k][::2, ::2]
+        s, v = sirka // 2, vyska // 2
+    # rozdel na stvorceky
+    for i in range(1, s//w+1):
+        for j in range(1, v // w + 1):
+            block = fxy[(j-1)*w:j*w, (i-1)*w:i*w]
+            # vycentruj
+            block_cent = block - 128
+            # dct
+            block_dct = dct2d(block_cent)
+            # kvantizacia
+            block_kvant = (block_dct / kvant).round()
+            # zigzag
+            block_zigzag = block_kvant.reshape([64])[zigzag_idx]
+            # rle
+            block_rle = rle(block_zigzag)
+            # odloz do vysledky
+            sucet += block_rle.size
+            rle_data.append(block_rle)
+
+# Presun RLE do array
+flat_rle_data = np.concatenate(rle_data)
+
+# Vypocet frekvencie
+freq_dict = defaultdict(int)
+for val, length in flat_rle_data:
+    freq_dict[length] += 1
+
+# Huffman
+huffman_dict = huffman(freq_dict)
+
+# Vypocet poctu bitov
+huffman_bits = sum(len(huffman_dict[length]) * freq_dict[length] for length in freq_dict)
+
+print("Jpeg velkost: ", huffman_bits)
+# print(sucet)
